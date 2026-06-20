@@ -26,3 +26,4 @@ def test_render_textbook_map_includes_detailed_points(tmp_path) -> None:
     assert "细化考点" in html
     assert "《村居》《咏柳》会背、会默写重点诗句" in html
     assert "1时=60分，1分=60秒" in html
+    assert '<link rel="icon" href="data:,">' in html

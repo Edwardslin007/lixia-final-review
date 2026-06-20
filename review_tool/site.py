@@ -60,6 +60,7 @@ def page(title: str, body: str, extra_head: str = "") -> str:
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{escape(title)}</title>
+  <link rel="icon" href="data:,">
   <link rel="stylesheet" href="../assets/site.css">
   {extra_head}
 </head>
