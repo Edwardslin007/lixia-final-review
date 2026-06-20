@@ -16,3 +16,12 @@ def test_textbook_map_math_includes_vertical_calculation_habit() -> None:
 
     assert "竖式" in joined
     assert "验算" in joined
+
+
+def test_textbook_map_units_include_detailed_sections() -> None:
+    data = textbook_map_data()
+    units = [unit for subject in data["subjects"] for unit in subject["units"]]
+
+    assert all(len(unit["details"]) >= 3 for unit in units)
+    assert "《村居》《咏柳》会背、会默写重点诗句" in units[0]["details"][0]["items"]
+    assert "1时=60分，1分=60秒" in units[9]["details"][0]["items"]
