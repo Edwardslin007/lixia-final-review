@@ -7,6 +7,8 @@ import re
 
 import markdown
 
+from review_tool.textbook_map import textbook_map_data
+
 
 IDENTITY_PATTERNS = [
     r"学校[:：]?.*",
@@ -109,6 +111,7 @@ def render_wrongbook(root: Path, docs_dir: Path) -> None:
     body = f"""
 <header class="topbar">
   <a href="../index.html">首页</a>
+  <a href="../textbook-map/index.html">课本知识点</a>
   <a href="../outline/index.html">复习大纲</a>
 </header>
 <main class="layout">
@@ -166,6 +169,7 @@ def render_outline(docs_dir: Path) -> None:
     body = f"""
 <header class="topbar">
   <a href="../index.html">首页</a>
+  <a href="../textbook-map/index.html">课本知识点</a>
   <a href="../wrongbook/index.html">错题集</a>
 </header>
 <main class="layout">
@@ -193,7 +197,7 @@ def render_knowledge_pages(root: Path, docs_dir: Path) -> None:
         html = markdown.markdown(excerpt, extensions=["fenced_code", "tables"])
         target = out / f"{md_path.stem}.html"
         body = f"""
-<header class="topbar"><a href="../index.html">首页</a><a href="../outline/index.html">复习大纲</a></header>
+<header class="topbar"><a href="../index.html">首页</a><a href="../textbook-map/index.html">课本知识点</a><a href="../outline/index.html">复习大纲</a></header>
 <main class="layout article">
   <section class="page-head">
     <p class="eyebrow">Knowledge</p>
@@ -224,6 +228,7 @@ def render_index(docs_dir: Path) -> None:
     <p>围绕课本、试题、错题和考前检查动作，集中解决“会做但容易马虎丢分”。</p>
   </section>
   <section class="tile-grid">
+    <a class="tile" href="textbook-map/index.html">课本知识点总览</a>
     <a class="tile" href="wrongbook/index.html">错题集锦</a>
     <a class="tile" href="outline/index.html">复习知识点大纲</a>
     <a class="tile" href="knowledge/index.html">结构化知识库</a>
@@ -242,13 +247,101 @@ def render_index(docs_dir: Path) -> None:
     (docs_dir / "index.html").write_text(root_page("期末特训工作台", body), encoding="utf-8")
 
 
+def render_textbook_map(docs_dir: Path) -> None:
+    data = textbook_map_data()
+    subject_sections = []
+    tabs = []
+    for subject_index, subject in enumerate(data["subjects"]):
+        active = " active" if subject_index == 0 else ""
+        tabs.append(
+            f'<button class="subject-tab{active}" data-subject="{escape(subject["name"])}">{escape(subject["name"])}</button>'
+        )
+        exam_moves = "".join(f"<li>{escape(item)}</li>" for item in subject["exam_moves"])
+        risk_points = "".join(f"<li>{escape(item)}</li>" for item in subject["risk_points"])
+        units = []
+        for unit_index, unit in enumerate(subject["units"], start=1):
+            lessons = "".join(f"<span>{escape(item)}</span>" for item in unit["lessons"])
+            knowledge = "".join(f"<li>{escape(item)}</li>" for item in unit["knowledge"])
+            checks = "".join(f"<li>{escape(item)}</li>" for item in unit["check"])
+            units.append(
+                f"""
+<article class="unit-card">
+  <div class="unit-number">{unit_index:02d}</div>
+  <div class="unit-body">
+    <h3>{escape(unit['title'])}</h3>
+    <div class="lesson-strip">{lessons}</div>
+    <div class="unit-columns">
+      <section><h4>核心知识点</h4><ul>{knowledge}</ul></section>
+      <section><h4>复习检查</h4><ul>{checks}</ul></section>
+    </div>
+  </div>
+</article>
+"""
+            )
+        subject_sections.append(
+            f"""
+<section class="subject-map{active}" data-subject-panel="{escape(subject['name'])}">
+  <div class="subject-intro {escape(subject['theme'])}">
+    <div>
+      <p class="eyebrow">Textbook Track</p>
+      <h2>{escape(subject['name'])}课本知识点</h2>
+      <p>{escape(subject['subtitle'])}</p>
+    </div>
+    <div class="focus-box">
+      <h3>考试固定动作</h3>
+      <ol>{exam_moves}</ol>
+    </div>
+    <div class="focus-box risk-box">
+      <h3>高风险失分点</h3>
+      <ul>{risk_points}</ul>
+    </div>
+  </div>
+  <div class="unit-timeline">{''.join(units)}</div>
+</section>
+"""
+        )
+
+    body = f"""
+<header class="topbar">
+  <a href="../index.html">首页</a>
+  <a href="../wrongbook/index.html">错题集</a>
+  <a href="../outline/index.html">复习大纲</a>
+</header>
+<main class="layout textbook-layout">
+  <section class="page-head textbook-head">
+    <p class="eyebrow">One Page Textbook Map</p>
+    <h1>语文和数学课本知识点总览</h1>
+    <p>把二年级下册语文、数学课本压缩成一张复习地图：按课本单元顺序看，先抓核心知识点，再看检查动作。</p>
+  </section>
+  <section class="subject-switch" aria-label="科目切换">
+    {''.join(tabs)}
+  </section>
+  {''.join(subject_sections)}
+</main>
+<script>
+document.querySelectorAll('.subject-tab').forEach(tab => {{
+  tab.addEventListener('click', () => {{
+    const subject = tab.dataset.subject;
+    document.querySelectorAll('.subject-tab').forEach(item => item.classList.toggle('active', item === tab));
+    document.querySelectorAll('.subject-map').forEach(panel => {{
+      panel.classList.toggle('active', panel.dataset.subjectPanel === subject);
+    }});
+  }});
+}});
+</script>
+"""
+    out = docs_dir / "textbook-map"
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "index.html").write_text(page("课本知识点总览", body), encoding="utf-8")
+
+
 def render_css(docs_dir: Path) -> None:
     assets = docs_dir / "assets"
     assets.mkdir(parents=True, exist_ok=True)
     (assets / "site.css").write_text(
         """
 :root{--ink:#17211b;--muted:#68746c;--paper:#fbfaf5;--line:#d8d8ce;--green:#23634b;--red:#c7352c;--blue:#2f5f98;--gold:#ad7a16}
-*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:"Microsoft YaHei","Noto Sans CJK SC",sans-serif;line-height:1.65}a{color:inherit}.topbar{height:56px;display:flex;gap:18px;align-items:center;padding:0 28px;border-bottom:1px solid var(--line);background:#fffdf8;position:sticky;top:0;z-index:2}.topbar a{text-decoration:none;color:var(--green);font-weight:700}.layout{max-width:1120px;margin:0 auto;padding:34px 22px 70px}.home{max-width:1080px;margin:0 auto;padding:56px 22px}.home-hero,.page-head{border-bottom:2px solid var(--ink);padding-bottom:22px;margin-bottom:24px}.eyebrow{text-transform:uppercase;letter-spacing:.08em;color:var(--gold);font-weight:800;margin:0 0 8px}h1{font-size:clamp(34px,5vw,64px);line-height:1.05;margin:0 0 14px}h2{font-size:28px;margin:26px 0 12px}h3{margin:14px 0 8px}.tile-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin:24px 0}.tile{display:block;padding:22px;min-height:110px;text-decoration:none;border:1px solid var(--line);background:white;border-radius:8px;font-size:22px;font-weight:800;color:var(--green)}.exam-rules,.outline-section{background:white;border:1px solid var(--line);border-radius:8px;padding:22px;margin-top:20px}.outline-columns{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px}.toolbar{display:flex;gap:10px;margin:18px 0;flex-wrap:wrap}.toolbar button{border:1px solid var(--line);background:white;border-radius:999px;padding:8px 16px;font-weight:800;cursor:pointer}.toolbar button.active{background:var(--ink);color:white}.wrong-grid{display:grid;gap:16px}.wrong-card{background:white;border:1px solid var(--line);border-left:8px solid var(--red);border-radius:8px;padding:18px}.wrong-card__meta{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:14px}.reason{font-weight:700;color:var(--blue)}pre{white-space:pre-wrap;word-break:break-word;background:#f3f1e8;border:1px solid var(--line);border-radius:6px;padding:14px;max-height:420px;overflow:auto}.knowledge-toggle summary{cursor:pointer;font-weight:900;color:var(--red)}.star{font-size:24px;color:var(--red);vertical-align:-2px}.knowledge-panel{border-top:1px solid var(--line);margin-top:12px;padding-top:12px}.article{max-width:900px}.article code{white-space:pre-wrap}@media print{.topbar,.toolbar{display:none}.wrong-card{break-inside:avoid}body{background:white}.layout{padding:0}pre{max-height:none}}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:"Microsoft YaHei","Noto Sans CJK SC",sans-serif;line-height:1.65}a{color:inherit}.topbar{height:56px;display:flex;gap:18px;align-items:center;padding:0 28px;border-bottom:1px solid var(--line);background:#fffdf8;position:sticky;top:0;z-index:2}.topbar a{text-decoration:none;color:var(--green);font-weight:700}.layout{max-width:1120px;margin:0 auto;padding:34px 22px 70px}.home{max-width:1080px;margin:0 auto;padding:56px 22px}.home-hero,.page-head{border-bottom:2px solid var(--ink);padding-bottom:22px;margin-bottom:24px}.eyebrow{text-transform:uppercase;letter-spacing:.08em;color:var(--gold);font-weight:800;margin:0 0 8px}h1{font-size:clamp(34px,5vw,64px);line-height:1.05;margin:0 0 14px}h2{font-size:28px;margin:26px 0 12px}h3{margin:14px 0 8px}.tile-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin:24px 0}.tile{display:block;padding:22px;min-height:110px;text-decoration:none;border:1px solid var(--line);background:white;border-radius:8px;font-size:22px;font-weight:800;color:var(--green)}.exam-rules,.outline-section{background:white;border:1px solid var(--line);border-radius:8px;padding:22px;margin-top:20px}.outline-columns{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px}.toolbar{display:flex;gap:10px;margin:18px 0;flex-wrap:wrap}.toolbar button{border:1px solid var(--line);background:white;border-radius:999px;padding:8px 16px;font-weight:800;cursor:pointer}.toolbar button.active{background:var(--ink);color:white}.wrong-grid{display:grid;gap:16px}.wrong-card{background:white;border:1px solid var(--line);border-left:8px solid var(--red);border-radius:8px;padding:18px}.wrong-card__meta{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:14px}.reason{font-weight:700;color:var(--blue)}pre{white-space:pre-wrap;word-break:break-word;background:#f3f1e8;border:1px solid var(--line);border-radius:6px;padding:14px;max-height:420px;overflow:auto}.knowledge-toggle summary{cursor:pointer;font-weight:900;color:var(--red)}.star{font-size:24px;color:var(--red);vertical-align:-2px}.knowledge-panel{border-top:1px solid var(--line);margin-top:12px;padding-top:12px}.article{max-width:900px}.article code{white-space:pre-wrap}.textbook-layout{max-width:1240px}.textbook-head{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}.subject-switch{display:flex;gap:8px;margin:18px 0 22px;position:sticky;top:56px;z-index:1;background:linear-gradient(#fbfaf5 70%,rgba(251,250,245,.75));padding:10px 0}.subject-tab{border:1px solid var(--line);background:#fffdf8;color:var(--ink);border-radius:8px;padding:10px 22px;font-weight:900;font-size:18px;cursor:pointer}.subject-tab.active{background:var(--ink);color:white}.subject-map{display:none}.subject-map.active{display:block}.subject-intro{display:grid;grid-template-columns:1.35fr .9fr .9fr;gap:14px;padding:20px;border:1px solid var(--line);border-radius:8px;background:#fffdf8}.subject-intro.language{border-top:8px solid var(--green)}.subject-intro.math{border-top:8px solid var(--blue)}.subject-intro h2{margin-top:0}.focus-box{background:white;border:1px solid var(--line);border-radius:8px;padding:16px}.risk-box{border-color:#e5b8aa}.focus-box ol,.focus-box ul{margin:0;padding-left:20px}.unit-timeline{position:relative;display:grid;gap:14px;margin-top:18px}.unit-timeline:before{content:"";position:absolute;left:28px;top:0;bottom:0;width:2px;background:var(--line)}.unit-card{display:grid;grid-template-columns:64px minmax(0,1fr);gap:14px;position:relative}.unit-number{height:56px;width:56px;border-radius:50%;background:var(--ink);color:white;display:grid;place-items:center;font-weight:900;z-index:1}.unit-body{background:white;border:1px solid var(--line);border-radius:8px;padding:18px}.unit-body h3{margin:0 0 10px;font-size:24px}.lesson-strip{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}.lesson-strip span{border:1px solid var(--line);background:#f7f5ed;border-radius:999px;padding:4px 10px;font-size:14px}.unit-columns{display:grid;grid-template-columns:1fr 1fr;gap:12px}.unit-columns section{background:#fbfaf5;border:1px solid var(--line);border-radius:8px;padding:12px}.unit-columns h4{margin:0 0 6px;color:var(--green)}.unit-columns ul{margin:0;padding-left:20px}@media(max-width:820px){.subject-intro,.unit-columns{grid-template-columns:1fr}.topbar{overflow:auto}.unit-card{grid-template-columns:48px minmax(0,1fr)}.unit-number{width:44px;height:44px}.unit-timeline:before{left:22px}}@media print{.topbar,.toolbar,.subject-switch{display:none}.wrong-card,.unit-card{break-inside:avoid}body{background:white}.layout{padding:0}pre{max-height:none}.subject-map{display:block}.subject-intro,.unit-body{box-shadow:none}}
 """.strip(),
         encoding="utf-8",
     )
@@ -261,4 +354,5 @@ def render_site(root: Path) -> None:
     render_index(docs_dir)
     render_wrongbook(root, docs_dir)
     render_outline(docs_dir)
+    render_textbook_map(docs_dir)
     render_knowledge_pages(root, docs_dir)
