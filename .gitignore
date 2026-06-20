@@ -1,0 +1,29 @@
+# Raw student/material photos stay local.
+数学课本拍照/
+数学试题拍照/
+语文课本拍照/
+语文试题拍照/
+小红书笔记图片_6a2e6822/
+data/raw/
+
+# Generated intermediate artifacts.
+data/ocr/
+data/manifest/
+data/preprocessed/
+data/review/
+/knowledge/
+wrongbook/*.md
+wrongbook/wrong_items.json
+wrongbook/pdf/*.html
+*.tmp
+output/
+
+# Python/tooling.
+__pycache__/
+.pytest_cache/
+.venv/
+*.pyc
+
+# Local OS/editor files.
+.DS_Store
+Thumbs.db
