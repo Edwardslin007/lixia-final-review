@@ -17,6 +17,7 @@ wrongbook/wrong_items.json
 wrongbook/pdf/*.html
 *.tmp
 output/
+private_archive/
 
 # Python/tooling.
 __pycache__/

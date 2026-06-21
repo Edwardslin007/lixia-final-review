@@ -12,8 +12,7 @@ from review_tool.site import render_site
 def main() -> None:
     render_site(ROOT)
     print(ROOT / "docs" / "index.html")
-    print(ROOT / "docs" / "wrongbook" / "index.html")
-    print(ROOT / "docs" / "outline" / "index.html")
+    print(ROOT / "docs" / "sprint" / "index.html")
 
 
 if __name__ == "__main__":
